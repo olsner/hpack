@@ -1,0 +1,6 @@
+[submodule "hyper"]
+	path = hyper
+	url = https://github.com/lukasa/hyper
+[submodule "hpack-test-case"]
+	path = hpack-test-case
+	url = https://github.com/http2jp/hpack-test-case/
