@@ -210,7 +210,26 @@ int main(int argc, const char *argv[])
         debug("\nparsed %s = %s\n", name.c_str(), value.c_str());
 
         bool push = true;
-        if (int i = dyn_table.find(name, value)) {
+        size_t table_size = 32 + name.length() + value.length();
+        // TODO Add a rule (like similar code in other encoders) for deciding
+        // if a header value is sensitive and should be forced literal.
+        uint8_t sensitive = 0; // 0x10;
+        if (sensitive || table_size > 3 * max_dynamic_size / 4) {
+            // Sensitive => "literal header never indexed", intermediaries must
+            // not use indexed encoding for this.
+            // not sensitive => "literal header without indexing", just avoid
+            // blowing away the dynamic table.
+            debug("oversized/sensitive (%zu), non-indexed\n", table_size);
+            int name_ix = dyn_table.find(name);
+            if (name_ix) {
+                put_int(sensitive, 4, name_ix);
+            } else {
+                put8(sensitive);
+                put_string(name);
+            }
+            put_string(value);
+            push = false;
+        } else if (int i = dyn_table.find(name, value)) {
             debug("index (both): %d\n", i);
             push = false; // References are never added to the table.
             put_int(0x80, 7, i);
