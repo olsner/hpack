@@ -9,6 +9,8 @@
 
 #define debug(...) fprintf(stderr, ## __VA_ARGS__)
 
+static const bool USE_HUFFMAN = true;
+
 using std::deque;
 using std::map;
 using std::string;
@@ -162,7 +164,7 @@ static string huff(const string &h)
 static void put_string(const string &s)
 {
     string h = huff(s);
-    if (h.size() < s.size()) {
+    if (USE_HUFFMAN && h.size() < s.size()) {
         put_int(0x80, 7, h.size());
         fwrite(h.c_str(), 1, h.length(), stdout);
     } else {
@@ -201,8 +203,6 @@ int main(int argc, const char *argv[])
 
         string name = string(start, name_end);
         string value = string(value_start, end ? end : input_end);
-
-        //string huffname = huff(name), huffval = huff(value);
 
         debug("\nparsed %s = %s\n", name.c_str(), value.c_str());
 
