@@ -120,13 +120,52 @@ static void put_int(uint8_t prebyte, unsigned prebits, unsigned value)
     }
 }
 
+static unsigned drain(string& out, unsigned& bits, unsigned len)
+{
+    while (len >= 8) {
+        len -= 8;
+        out += (char)(uint8_t)(bits >> len);
+        bits &= (1 << len) - 1;
+    }
+    return len;
+}
+
+static string huff(const string &h)
+{
+    unsigned bits = 0;
+    unsigned n = 0;
+
+    string out;
+    const char *p = h.c_str();
+    while (uint8_t c = *p++) {
+        uint32_t code = huff_codes[c];
+        unsigned len = huff_lengths[c];
+        if (len > 24) {
+            bits <<= len - 24;
+            bits |= (code >> (len - 25));
+            n += len - 24;
+            len = 24;
+            n = drain(out, bits, n);
+        }
+        bits <<= len;
+        bits |= code;
+        n = drain(out, bits, n + len);
+    }
+    if (n) {
+        bits <<= 7;
+        bits |= 0x7f;
+        n = drain(out, bits, n + 7);
+    }
+    return out;
+}
+
 static void put_string(const string &s)
 {
-    /*string h = huff(s);
+    string h = huff(s);
     if (h.size() < s.size()) {
         put_int(0x80, 7, h.size());
         fwrite(h.c_str(), 1, h.length(), stdout);
-    } else*/ {
+    } else {
         put_int(0, 7, s.size());
         fwrite(s.c_str(), 1, s.length(), stdout);
     }
