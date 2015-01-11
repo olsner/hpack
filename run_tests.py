@@ -29,21 +29,30 @@ def get_wires(cases):
         res.append(wire.decode('hex'))
     return res
 
-def find_best(f):
-    min_len = None
-    best_data = None
-    best_name = None
+def iter_dirs(f):
     for d in os.listdir(tests_dirs):
         p = os.path.join(tests_dirs, d, f)
         if not os.path.isfile(p) or d == 'raw-data':
             continue
         with open(p, "r") as h:
             data = json.load(h)
+        if int(data.get('draft', 0)) != 9:
+            #print "old data in", d
+            continue
+
         refdata = get_wires(data['cases'])
         if refdata is None:
             print "no data for", f, "in", d
             continue
         refdata = ''.join(refdata)
+
+        yield d, data, refdata
+
+def find_best(f):
+    min_len = None
+    best_data = None
+    best_name = None
+    for d, data, refdata in iter_dirs(f):
         if min_len is None or min_len > len(refdata):
             min_len = len(refdata)
             best_data = refdata
@@ -67,18 +76,44 @@ def parse_test(f):
     refdata, refname = find_best(f)
     return f, ''.join(headers), size, refdata, refname
 
-def run_test(f, headers, orig_size, refdata, refname):
+def pack(headers):
     proc = subprocess.Popen(["./hpack"], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    t = time.time()
-    res,err = proc.communicate(headers)
-    t = time.time() - t
+    return proc.communicate(headers)
+
+def unpack(res):
+    proc = subprocess.Popen(["./hunpack"], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    return proc.communicate(res)
+
+def check_unpack(res, headers, context = ""):
+    un_headers,err = unpack(res)
+    if un_headers != headers:
+        print "Decoder failed!", context
+        print "Raw data (hex):"
+        print res.encode("hex")
+        print "Decoded headers:"
+        print un_headers
+        print
+        print "Original headers:"
+        print headers
+        print "--------"
+    assert un_headers == headers.encode("utf-8"), err
+
+def test_encode(f, headers, orig_size, refdata, refname):
+    res,err = pack(headers)
     pct = 100.0 * len(res) / orig_size
-    print f, len(res), "%.3fms" % (t * 1000), "%.0f%%, %s %+d" % (pct, refname, len(res) - len(refdata))
-    assert headers == decode_hpack(res)
+    print f, len(res), "%.0f%%, %s %+d" % (pct, refname, len(res) - len(refdata))
+    assert headers == decode_hpack(res), err
     global total_size, total_orig, total_best
     total_size += len(res)
     total_orig += orig_size
     total_best += len(refdata)
+
+    check_unpack(res, headers)
+    check_unpack(refdata, headers)
+
+def test_decode(f, headers, orig_size, refdata, refname):
+    for d, data, refdata in iter_dirs(f):
+        check_unpack(refdata, headers, f)
 
 tests = []
 for f in sorted(os.listdir(tests_dir)):
@@ -86,7 +121,8 @@ for f in sorted(os.listdir(tests_dir)):
         continue
     tests.append(parse_test(f))
 for test in tests:
-    run_test(*test)
+    test_encode(*test)
+    test_decode(*test)
 
 pct = 100.0 * total_size / total_orig
 print "total %d/%d (%.0f%%)" % (total_size, total_orig, pct)

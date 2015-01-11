@@ -5,6 +5,61 @@
 
 #include "common.h"
 
+static const HuffTableEntry* find_code(uint32_t code)
+{
+    const HuffTableEntry* const start = huff_decode_table;
+    const HuffTableEntry* const end = start + 256;
+    const HuffTableEntry* res = std::lower_bound(start, end, code);
+    if (res->msb_code > code) {
+        assert(res > start);
+        res--;
+    }
+    return res;
+}
+
+static string decode_huffman(string input)
+{
+    unsigned min_bits = 30;
+    unsigned bits = 0;
+    uint64_t n = 0;
+    const uint8_t *pos = (const uint8_t*)input.c_str();
+    const uint8_t *const end = pos + input.length();
+    string res;
+
+    // Hurr. Durr.
+    while (bits || pos < end) {
+        while (bits < min_bits) {
+            uint8_t b1 = 0xff;
+            if (pos < end) {
+                b1 = *pos++;
+            }
+            assert(bits + 8 <= 64);
+            bits += 8;
+            n |= (uint64_t)b1 << (64 - bits);
+            //debug("read %#x, have %u bits in %#lx\n", b1, bits, n);
+        }
+        uint32_t code = n >> 32;
+        // EOS
+        if (code >= 0xfffffffc) {
+            break;
+        }
+        //debug("have %u bits in %#lx (%#x)\n", bits, n, code);
+        const HuffTableEntry* p = find_code(n >> 32);
+        assert(p);
+        unsigned len = huff_lengths[p->value];
+        uint32_t shifted_code = code >> (32 - len);
+        debug("found code %#x (%u bits, %#x, %#x), char %#x '%c'\n", p->msb_code, len, p->msb_code >> (32 - len), shifted_code, p->value, p->value);
+        assert(shifted_code == (p->msb_code >> (32 - len)));
+        n <<= len;
+        bits -= len;
+        res += (char)p->value;
+    }
+
+    debug("huffman-decoded: %s\n", res.c_str());
+
+    return res;
+}
+
 static unsigned mask(unsigned bits)
 {
     return (1 << bits) - 1;
@@ -37,10 +92,12 @@ static string get_string(const uint8_t*& pos, const uint8_t* const end)
     unsigned length = get_int(b1, mask(7), pos, end);
     const char *start = (const char*)pos;
     pos += length;
+    string s(start, (const char*)pos);
     if (b1 & 0x80) {
-        return "<huffman encoded>";
+        return decode_huffman(s);
     } else {
-        return string(start, (const char*)pos);
+        debug("plain string: %s\n", s.c_str());
+        return s;
     }
 }
 
@@ -89,6 +146,7 @@ int main(int argc, const char *argv[])
         }
 
         printf("%s: %s\n", name.c_str(), value.c_str());
+        debug("=> %s: %s\n", name.c_str(), value.c_str());
         if (push) {
             dyn_table.push(name, value);
             dyn_table.shrink(max_dynamic_size);
