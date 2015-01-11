@@ -190,7 +190,7 @@ static string read_fully(FILE *fp)
 
 int main(int argc, const char *argv[])
 {
-    const unsigned max_dynamic_size = 256;
+    const unsigned max_dynamic_size = 4096;
     DynamicTable dyn_table;
 
     string input = read_fully(stdin);
