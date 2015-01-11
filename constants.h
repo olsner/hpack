@@ -1,0 +1,75 @@
+static const uint32_t huff_codes[257] = { 0
+};
+static const uint8_t huff_lengths[257] = { 0
+};
+
+#define E(...) TableEntry(__VA_ARGS__)
+static const TableEntry static_table[] = {
+    E(":authority",""),
+    E(":method","GET"),
+    E(":method","POST"),
+    E(":path","/"),
+    E(":path","/index.html"),
+    E(":scheme","http"),
+    E(":scheme","https"),
+    E(":status","200"),
+    E(":status","204"),
+    E(":status","206"),
+    E(":status","304"),
+    E(":status","400"),
+    E(":status","404"),
+    E(":status","500"),
+    E("accept-charset",""),
+    E("accept-encoding","gzip, deflate"),
+    E("accept-language",""),
+    E("accept-ranges",""),
+    E("accept",""),
+    E("access-control-allow-origin",""),
+    E("age",""),
+    E("allow",""),
+    E("authorization",""),
+    E("cache-control",""),
+    E("content-disposition",""),
+    E("content-encoding",""),
+    E("content-language",""),
+    E("content-length",""),
+    E("content-location",""),
+    E("content-range",""),
+    E("content-type",""),
+    E("cookie",""),
+    E("date",""),
+    E("etag",""),
+    E("expect",""),
+    E("expires",""),
+    E("from",""),
+    E("host",""),
+    E("if-match",""),
+    E("if-modified-since",""),
+    E("if-none-match",""),
+    E("if-range",""),
+    E("if-unmodified-since",""),
+    E("last-modified",""),
+    E("link",""),
+    E("location",""),
+    E("max-forwards",""),
+    E("proxy-authenticate",""),
+    E("proxy-authorization",""),
+    E("range",""),
+    E("referer",""),
+    E("refresh",""),
+    E("retry-after",""),
+    E("server",""),
+    E("set-cookie",""),
+    E("strict-transport-security",""),
+    E("transfer-encoding",""),
+    E("user-agent",""),
+    E("vary",""),
+    E("via",""),
+    E("www-authenticate",""),
+};
+
+static const size_t STATIC_TABLE_COUNT = sizeof(static_table) / sizeof(*static_table);
+
+// Indices 1..61 are static, meaning 62 is the first dynamic one.
+static const unsigned dynamic_table_start = 62;
+

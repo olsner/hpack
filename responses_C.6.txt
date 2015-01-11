@@ -1,0 +1,14 @@
+:status: 302
+cache-control: private
+date: Mon, 21 Oct 2013 20:13:21 GMT
+location: https://www.example.com
+:status: 307
+cache-control: private
+date: Mon, 21 Oct 2013 20:13:21 GMT
+location: https://www.example.com
+:status: 200
+cache-control: private
+date: Mon, 21 Oct 2013 20:13:22 GMT
+location: https://www.example.com
+content-encoding: gzip
+set-cookie: foo=ASDJKHQKBZXOQWEOPIUAXQWEOIU; max-age=3600; version=1
