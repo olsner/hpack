@@ -164,14 +164,16 @@ static string huff(const string &h)
 
 static void put_string(const string &s)
 {
-    string h = huff(s);
-    if (USE_HUFFMAN && h.size() < s.size()) {
-        put_int(0x80, 7, h.size());
-        fwrite(h.c_str(), 1, h.length(), stdout);
-    } else {
-        put_int(0, 7, s.size());
-        fwrite(s.c_str(), 1, s.length(), stdout);
+    if (USE_HUFFMAN) {
+        string h = huff(s);
+        if (h.size() < s.size()) {
+            put_int(0x80, 7, h.size());
+            fwrite(h.c_str(), 1, h.length(), stdout);
+            return;
+        }
     }
+    put_int(0, 7, s.size());
+    fwrite(s.c_str(), 1, s.length(), stdout);
 }
 
 static string read_fully(FILE *fp)
