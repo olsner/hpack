@@ -7,7 +7,8 @@
 #include <map>
 #include <string>
 
-#define debug(...) fprintf(stderr, ## __VA_ARGS__)
+//#define debug(...) fprintf(stderr, ## __VA_ARGS__)
+#define debug(...) (void)0
 
 static const bool USE_HUFFMAN = true;
 
