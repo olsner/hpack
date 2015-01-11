@@ -3,100 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <deque>
-#include <map>
-#include <string>
-
-//#define debug(...) fprintf(stderr, ## __VA_ARGS__)
-#define debug(...) (void)0
+#include "common.h"
 
 static const bool USE_HUFFMAN = true;
-
-using std::deque;
-using std::map;
-using std::string;
-
-struct TableEntry
-{
-    const string name, value;
-
-    TableEntry(string name, string value = ""): name(name), value(value) {}
-
-    unsigned size() const {
-        return 32 + name.length() + value.length();
-    }
-};
-
-#include "constants.h"
-
-template <class It>
-static int find(string name, string value, It p, It end, int offset)
-{
-    for (size_t i = 0; p != end; p++, i++) {
-        if (p->name == name && p->value == value) {
-            return i + offset;
-        }
-    }
-    return 0;
-}
-
-template <class It>
-static int find(string name, It p, It end, int offset)
-{
-    for (size_t i = 0; p != end; p++, i++) {
-        if (p->name == name) {
-            return i + offset;
-        }
-    }
-    return 0;
-}
-
-static int find_static(string name)
-{
-    return find(name, static_table, static_table + STATIC_TABLE_COUNT, 1);
-}
-static int find_static(string name, string value)
-{
-    return find(name, value, static_table, static_table + STATIC_TABLE_COUNT, 1);
-}
-
-struct DynamicTable
-{
-    deque<TableEntry> table;
-    unsigned size;
-
-    DynamicTable(): size(0) {}
-
-    void shrink(unsigned max_size) {
-        while (size > max_size && table.size()) {
-            TableEntry &e = table.back();
-            debug("%u bytes over budget, evicting %s = %s for %u bytes\n", size - max_size, e.name.c_str(), e.value.c_str(), e.size());
-            size -= e.size();
-            table.pop_back();
-        }
-    }
-
-    int find(string name, string value) {
-        if (int i = find_static(name, value)) {
-            return i;
-        } else {
-            return ::find(name, value, table.begin(), table.end(), dynamic_table_start);
-        }
-    }
-
-    int find(string name) {
-        if (int i = find_static(name)) {
-            return i;
-        } else {
-            return ::find(name, table.begin(), table.end(), dynamic_table_start);
-        }
-    }
-
-    void push(string name, string value) {
-        table.push_front(TableEntry(name, value));
-        size += table.front().size();
-    }
-};
 
 static void put8(uint8_t v)
 {
@@ -174,18 +83,6 @@ static void put_string(const string &s)
     }
     put_int(0, 7, s.size());
     fwrite(s.c_str(), 1, s.length(), stdout);
-}
-
-static string read_fully(FILE *fp)
-{
-    string t;
-    while (!feof(fp)) {
-        char tmp[1024];
-        size_t n = fread(tmp, 1, sizeof(tmp), fp);
-        t.append(tmp, n);
-        assert(!ferror(fp));
-    }
-    return t;
 }
 
 int main(int argc, const char *argv[])

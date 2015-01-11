@@ -1,3 +1,25 @@
+#include <deque>
+#include <map>
+#include <string>
+
+//#define debug(...) fprintf(stderr, ## __VA_ARGS__)
+#define debug(...) (void)0
+
+using std::deque;
+using std::map;
+using std::string;
+
+struct TableEntry
+{
+    const string name, value;
+
+    TableEntry(string name, string value = ""): name(name), value(value) {}
+
+    unsigned size() const {
+        return 32 + name.length() + value.length();
+    }
+};
+
 /*
  *                                                    code
                        code as bits                 as hex   len
@@ -382,4 +404,96 @@ static const size_t STATIC_TABLE_COUNT = sizeof(static_table) / sizeof(*static_t
 
 // Indices 1..61 are static, meaning 62 is the first dynamic one.
 static const unsigned dynamic_table_start = 62;
+
+template <class It>
+static int find(string name, string value, It p, It end, int offset)
+{
+    for (size_t i = 0; p != end; p++, i++) {
+        if (p->name == name && p->value == value) {
+            return i + offset;
+        }
+    }
+    return 0;
+}
+
+template <class It>
+static int find(string name, It p, It end, int offset)
+{
+    for (size_t i = 0; p != end; p++, i++) {
+        if (p->name == name) {
+            return i + offset;
+        }
+    }
+    return 0;
+}
+
+static int find_static(string name)
+{
+    return find(name, static_table, static_table + STATIC_TABLE_COUNT, 1);
+}
+static int find_static(string name, string value)
+{
+    return find(name, value, static_table, static_table + STATIC_TABLE_COUNT, 1);
+}
+
+struct DynamicTable
+{
+    deque<TableEntry> table;
+    unsigned size;
+
+    DynamicTable(): size(0) {}
+
+    void shrink(unsigned max_size) {
+        while (size > max_size && table.size()) {
+            TableEntry &e = table.back();
+            debug("%u bytes over budget, evicting %s = %s for %u bytes\n", size - max_size, e.name.c_str(), e.value.c_str(), e.size());
+            size -= e.size();
+            table.pop_back();
+        }
+    }
+
+    int find(string name, string value) {
+        if (int i = find_static(name, value)) {
+            return i;
+        } else {
+            return ::find(name, value, table.begin(), table.end(), dynamic_table_start);
+        }
+    }
+
+    int find(string name) {
+        if (int i = find_static(name)) {
+            return i;
+        } else {
+            return ::find(name, table.begin(), table.end(), dynamic_table_start);
+        }
+    }
+
+    void push(string name, string value) {
+        table.push_front(TableEntry(name, value));
+        size += table.front().size();
+    }
+
+    const TableEntry& get(unsigned i) {
+        if (0 < i && i < dynamic_table_start) {
+            return static_table[i - 1];
+        } else if (dynamic_table_start <= i && i - dynamic_table_start < table.size()) {
+            return table[i - dynamic_table_start];
+        } else {
+            debug("invalid table index %d (static 1..%zu, dynamic %u..%zu)\n", i, STATIC_TABLE_COUNT, dynamic_table_start, dynamic_table_start + table.size() - 1);
+            assert(!"invalid table index");
+        }
+    }
+};
+
+static string read_fully(FILE *fp)
+{
+    string t;
+    while (!feof(fp)) {
+        char tmp[1024];
+        size_t n = fread(tmp, 1, sizeof(tmp), fp);
+        t.append(tmp, n);
+        assert(!ferror(fp));
+    }
+    return t;
+}
 
