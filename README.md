@@ -17,6 +17,8 @@ seems to be public domain.
 ## Instructions ##
 
 Build: run make.
+
 Test: build, check out the submodules, then run ./run_tests.py
+
 Use: if you really want to, hpack takes a series of "header: value" lines on
 stdin and writes binary hpack data on stdout.
