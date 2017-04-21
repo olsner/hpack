@@ -1,4 +1,3 @@
-
 namespace {
 const HuffTableEntry* find_code(uint32_t code)
 {
@@ -164,6 +163,10 @@ public:
 
     void eof() {
         assert(buffer.empty());
+    }
+
+    bool has_buffer() const {
+        return buffer.size() > 0;
     }
 };
 
