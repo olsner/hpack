@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <deque>
 #include <map>
 #include <set>
@@ -27,7 +28,7 @@ struct TableEntry
 {
     string name, value;
 
-    TableEntry(string name, string value = ""): name(name), value(value) {}
+    TableEntry(const string& name, const string& value): name(name), value(value) {}
 
     unsigned size() const {
         return 32 + name.length() + value.length();
@@ -619,8 +620,9 @@ static const HuffTableEntry huff_decode_table[256] = {
 { 0xfffffff8, 0x16 },
 };
 
-#define E(...) TableEntry(__VA_ARGS__)
-static const TableEntry static_table[] = {
+typedef const char *StaticTableEntry;
+#define E(name, value) name "\0" value
+static const StaticTableEntry static_table[] = {
     E(":authority",""),
     E(":method","GET"),
     E(":method","POST"),
@@ -684,13 +686,55 @@ static const TableEntry static_table[] = {
     E("www-authenticate",""),
 };
 
-static const size_t STATIC_TABLE_COUNT = sizeof(static_table) / sizeof(*static_table);
+const size_t STATIC_TABLE_COUNT = sizeof(static_table) / sizeof(*static_table);
 
 // Indices 1..61 are static, meaning 62 is the first dynamic one.
-static const unsigned dynamic_table_start = 62;
+const unsigned dynamic_table_start = 62;
+
+const StaticTableEntry *find_first_static(string name)
+{
+    const auto end = static_table + STATIC_TABLE_COUNT;
+    const char* cname = name.c_str();
+    const auto p = std::lower_bound(static_table, end, cname,
+        [](const char *a, const char *b) -> bool {
+            return strcmp(a, b) < 0;
+        });
+    if (p < end && !name.compare(*p)) {
+        return p;
+    }
+    return nullptr;
+}
+size_t static_table_index(const StaticTableEntry *p)
+{
+    assert(p >= static_table && p < static_table + STATIC_TABLE_COUNT);
+    return 1 + p - static_table;
+}
+const char *get_static_value(StaticTableEntry e)
+{
+    return e + strlen(e) + 1;
+}
+size_t find_static(const string &name)
+{
+    if (auto p = find_first_static(name))
+        return static_table_index(p);
+    return 0;
+}
+size_t find_static(const string& name, const string& value)
+{
+    const auto end = static_table + STATIC_TABLE_COUNT;
+    if (auto p = find_first_static(name)) {
+        do {
+            if (!value.compare(get_static_value(*p))) {
+                return static_table_index(p);
+            }
+            p++;
+        } while (p < end && !name.compare(*p));
+    }
+    return 0;
+}
 
 template <class It>
-static int find(string name, string value, It p, It end, int offset)
+int find(string name, string value, It p, It end, int offset)
 {
     for (size_t i = 0; p != end; p++, i++) {
         if (p->name == name && p->value == value) {
@@ -711,14 +755,6 @@ static int find(string name, It p, It end, int offset)
     return 0;
 }
 
-static int find_static(string name)
-{
-    return find(name, static_table, static_table + STATIC_TABLE_COUNT, 1);
-}
-static int find_static(string name, string value)
-{
-    return find(name, value, static_table, static_table + STATIC_TABLE_COUNT, 1);
-}
 
 struct DynamicTable
 {
@@ -737,7 +773,7 @@ struct DynamicTable
         }
     }
 
-    int find(string name, string value) {
+    int find(const string& name, const string& value) {
         if (int i = find_static(name, value)) {
             return i;
         } else {
@@ -745,7 +781,7 @@ struct DynamicTable
         }
     }
 
-    int find(string name) {
+    int find(const string& name) {
         if (int i = find_static(name)) {
             return i;
         } else {
@@ -753,23 +789,32 @@ struct DynamicTable
         }
     }
 
-    void push(string name, string value) {
+    void push(const string& name, const string& value) {
         table.push_front(TableEntry(name, value));
         size += table.front().size();
     }
 
-    const TableEntry& get(unsigned i) {
+    const char *get_name(unsigned i) {
         if (0 < i && i < dynamic_table_start) {
             return static_table[i - 1];
+        } else if (dynamic_table_start <= i && i - dynamic_table_start < table.size()) {
+            return table[i - dynamic_table_start].name.c_str();
+        } else {
+            return "invalid table index";
+        }
+    }
+
+    const TableEntry& get(unsigned i) {
+        if (0 < i && i < dynamic_table_start) {
+            const auto& entry = static_table[i - 1];
+            return dummy_entry = TableEntry(entry, get_static_value(entry));
         } else if (dynamic_table_start <= i && i - dynamic_table_start < table.size()) {
             return table[i - dynamic_table_start];
         } else {
             char buf[256];
             snprintf(buf, sizeof(buf), "%d (static 1..%zu, dynamic %u..%zu)", i, STATIC_TABLE_COUNT, dynamic_table_start, dynamic_table_start + table.size() - 1);
             debug("invalid table index %s\n", buf);
-            dummy_entry.name = "invalid table index";
-            dummy_entry.value = buf;
-            return dummy_entry;
+            return dummy_entry = TableEntry("invalid table index", buf);
         }
     }
 };

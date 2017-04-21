@@ -100,6 +100,7 @@ class UnpackState {
     string buffer;
     DynamicTable dyn_table;
     unsigned max_dynamic_size;
+    string name, value;
 
 public:
     UnpackState(): max_dynamic_size(4096) {}
@@ -115,11 +116,11 @@ public:
         while (pos < input_end) {
             bool push = true;
             int name_ix = 0;
-            int value_ix = 0;
+            int both_ix = 0;
 
             uint8_t b1 = *pos++;
             if (b1 & 0x80) {
-                name_ix = value_ix = get_int(b1, mask(7), pos, input_end);
+                both_ix = get_int(b1, mask(7), pos, input_end);
                 debug("indexed (both): %d\n", name_ix);
                 push = false;
             } else if (b1 & 0x40) {
@@ -138,11 +139,13 @@ public:
                 debug("unindexed (name): %d\n", name_ix);
             }
 
-            string name, value;
-            if (name_ix) {
-                const TableEntry& e = dyn_table.get(name_ix);
+            if (both_ix) {
+                const TableEntry& e = dyn_table.get(both_ix);
                 name = e.name;
-                value = value_ix ? e.value : get_string(pos, input_end);
+                value = e.value;
+            } else if (name_ix) {
+                name = dyn_table.get_name(name_ix);
+                value = get_string(pos, input_end);
             } else {
                 name = get_string(pos, input_end);
                 value = get_string(pos, input_end);
