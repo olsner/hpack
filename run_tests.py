@@ -81,6 +81,10 @@ def unpack(res):
     proc = subprocess.Popen(["./hunpack"], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     return proc.communicate(res)
 
+def ngpack(res):
+    proc = subprocess.Popen(["./ng_hpack"], stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    return proc.communicate(res)
+
 def check_unpack(res, headers, context = ""):
     un_headers,err = unpack(res)
     if un_headers != headers:
@@ -112,6 +116,19 @@ def test_decode(f, headers, orig_size, refdata, refname):
     for d, data, refdata in iter_dirs(f):
         check_unpack(refdata, headers, f)
 
+def test_ngpack(f, headers, orig_size, refdata, refname):
+    headers = headers.encode("utf-8")
+    ngres,err = ngpack(headers)
+    assert not err, err
+    unpacked_ng,err = unpack(ngres)
+    assert not err, err
+    res,err = pack(headers)
+    assert not err, err
+    unpacked,err = unpack(res)
+    assert not err, err
+    assert unpacked_ng == unpacked
+    assert unpacked_ng == headers
+
 tests = []
 for f in sorted(os.listdir(tests_dir)):
     if not f.endswith(".json"):
@@ -120,6 +137,7 @@ for f in sorted(os.listdir(tests_dir)):
 for test in tests:
     test_encode(*test)
     test_decode(*test)
+    test_ngpack(*test)
 
 pct = 100.0 * total_size / total_orig
 print "total %d/%d (%.0f%%)" % (total_size, total_orig, pct)
