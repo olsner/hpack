@@ -27,13 +27,13 @@ int main(int argc, const char *argv[])
         string name = string(start, name_end);
         string value = string(value_start, end ? end : input_end);
 
-        debug("\nparsed %s = %s\n", name.c_str(), value.c_str());
-
         header_list.push_back({});
-        header_list.back().name = (uint8_t*)strdup(name.c_str());
-        header_list.back().namelen = name.size();
-        header_list.back().value = (uint8_t*)strdup(value.c_str());
-        header_list.back().valuelen = value.size();
+        nghttp2_nv &nv = header_list.back();
+        nv.name = (uint8_t*)strdup(name.c_str());
+        nv.namelen = name.size();
+        nv.value = (uint8_t*)strdup(value.c_str());
+        nv.valuelen = value.size();
+        nv.flags = NGHTTP2_NV_FLAG_NO_COPY_NAME | NGHTTP2_NV_FLAG_NO_COPY_VALUE;
     }
 
     nghttp2_hd_deflater *deflater = nullptr;

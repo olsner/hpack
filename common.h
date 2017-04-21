@@ -3,8 +3,15 @@
 #include <string>
 #include <vector>
 
-//#define debug(...) fprintf(stderr, ## __VA_ARGS__)
+#ifndef LOG_DEBUG
+#define LOG_DEBUG 0
+#endif
+
+#if LOG_DEBUG
+#define debug(...) fprintf(stderr, ## __VA_ARGS__)
+#else
 #define debug(...) (void)0
+#endif
 
 using std::deque;
 using std::map;
