@@ -1,6 +1,7 @@
 #include <deque>
 #include <map>
 #include <string>
+#include <vector>
 
 //#define debug(...) fprintf(stderr, ## __VA_ARGS__)
 #define debug(...) (void)0
@@ -8,10 +9,13 @@
 using std::deque;
 using std::map;
 using std::string;
+using std::vector;
+
+namespace {
 
 struct TableEntry
 {
-    const string name, value;
+    string name, value;
 
     TableEntry(string name, string value = ""): name(name), value(value) {}
 
@@ -710,8 +714,9 @@ struct DynamicTable
 {
     deque<TableEntry> table;
     unsigned size;
+    TableEntry dummy_entry;
 
-    DynamicTable(): size(0) {}
+    DynamicTable(): size(0), dummy_entry("", "") {}
 
     void shrink(unsigned max_size) {
         while (size > max_size && table.size()) {
@@ -749,8 +754,12 @@ struct DynamicTable
         } else if (dynamic_table_start <= i && i - dynamic_table_start < table.size()) {
             return table[i - dynamic_table_start];
         } else {
-            debug("invalid table index %d (static 1..%zu, dynamic %u..%zu)\n", i, STATIC_TABLE_COUNT, dynamic_table_start, dynamic_table_start + table.size() - 1);
-            assert(!"invalid table index");
+            char buf[256];
+            snprintf(buf, sizeof(buf), "%d (static 1..%zu, dynamic %u..%zu)", i, STATIC_TABLE_COUNT, dynamic_table_start, dynamic_table_start + table.size() - 1);
+            debug("invalid table index %s\n", buf);
+            dummy_entry.name = "invalid table index";
+            dummy_entry.value = buf;
+            return dummy_entry;
         }
     }
 };
@@ -767,3 +776,4 @@ static string read_fully(FILE *fp)
     return t;
 }
 
+}

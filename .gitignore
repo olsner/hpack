@@ -2,3 +2,7 @@
 /hunpack
 /zpipe
 /spdy3_putdict
+/ng_hpack
+
+*.d
+*.o

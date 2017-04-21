@@ -5,14 +5,15 @@
 
 #include "common.h"
 
-static const bool USE_HUFFMAN = true;
+namespace {
+const bool USE_HUFFMAN = true;
 
-static void put8(uint8_t v)
+void put8(uint8_t v)
 {
     fwrite(&v, 1, 1, stdout);
 }
 
-static void put_vint(unsigned value)
+void put_vint(unsigned value)
 {
     while (value >= 0x80) {
         put8(0x80 | (value & 0x7f));
@@ -21,7 +22,7 @@ static void put_vint(unsigned value)
     put8(value);
 }
 
-static void put_int(uint8_t prebyte, unsigned prebits, unsigned value)
+void put_int(uint8_t prebyte, unsigned prebits, unsigned value)
 {
     const unsigned maxval = (1 << prebits) - 1;
     if (value < maxval) {
@@ -32,7 +33,7 @@ static void put_int(uint8_t prebyte, unsigned prebits, unsigned value)
     }
 }
 
-static unsigned drain(string& out, unsigned& bits, unsigned len)
+unsigned drain(string& out, unsigned& bits, unsigned len)
 {
     while (len >= 8) {
         len -= 8;
@@ -42,7 +43,7 @@ static unsigned drain(string& out, unsigned& bits, unsigned len)
     return len;
 }
 
-static string huff(const string &h)
+string huff(const string &h)
 {
     unsigned bits = 0;
     unsigned n = 0;
@@ -71,7 +72,7 @@ static string huff(const string &h)
     return out;
 }
 
-static void put_string(const string &s)
+void put_string(const string &s)
 {
     if (USE_HUFFMAN) {
         string h = huff(s);
@@ -83,6 +84,7 @@ static void put_string(const string &s)
     }
     put_int(0, 7, s.size());
     fwrite(s.c_str(), 1, s.length(), stdout);
+}
 }
 
 int main(int argc, const char *argv[])

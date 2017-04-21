@@ -92,6 +92,7 @@ static string get_string(const uint8_t*& pos, const uint8_t* const end)
     unsigned length = get_int(b1, mask(7), pos, end);
     const char *start = (const char*)pos;
     pos += length;
+    assert(pos <= end);
     string s(start, (const char*)pos);
     if (b1 & 0x80) {
         return decode_huffman(s);

@@ -1,13 +1,17 @@
-CFLAGS = -Wall -pedantic -O2 -g
+NGHTTP2 ?= ../nghttp2
+CFLAGS = -Wall -pedantic -O2 -g -MD -MP -I$(NGHTTP2)/lib/includes
 CXXFLAGS = $(CFLAGS) -std=c++11
-LIBS = -lz
+LIBS = -lz $(NGHTTP2)/lib/.libs/libnghttp2.a
 
-all: hpack hunpack zpipe spdy3_putdict
+BINARIES = hpack hunpack zpipe spdy3_putdict ng_hpack
+all: $(BINARIES)
 
 %: %.cc
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) $< -o $@
+	$(CXX) -o $@ $(CXXFLAGS) $(LDFLAGS) $< $(LIBS)
 %: %.c
-	$(CC) $(CFLAGS) $(LDFLAGS) $< $(LIBS) -o $@
+	$(CC) -o $@ $(CFLAGS) $(LDFLAGS) $< $(LIBS)
 
-hpack: hpack.cc common.h
-hunpack: hunpack.cc common.h
+-include $(BINARIES:%=%.d)
+
+clean:
+	rm -f $(BINARIES)
