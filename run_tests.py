@@ -36,9 +36,6 @@ def iter_dirs(f):
             continue
         with open(p, "r") as h:
             data = json.load(h)
-        if int(data.get('draft', 0)) != 9:
-            #print "old data in", d
-            continue
 
         refdata = get_wires(data['cases'])
         if refdata is None:
